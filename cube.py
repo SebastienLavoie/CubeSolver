@@ -3,6 +3,7 @@ import logger as log
 import logging
 from enum import Enum
 from pathlib import Path
+import tkinter as tk
 
 logger = log.setup(name=str(Path(__file__).stem))
 logger.setLevel(logging.DEBUG)
@@ -21,7 +22,7 @@ class CubeVals(Enum):
 
 
 class Face:
-    def __init__(self, ndarray: np.ndarray[CubeVals] = None):
+    def __init__(self, ndarray: np.ndarray = None):
         if ndarray is None:
             self.values = np.zeros((3, 3))
         else:
@@ -100,11 +101,52 @@ class Face:
         logger.debug(f"Rotated {direction} {k} times")
 
 
+class GUI(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
+        self.pack()
+        self.entries = {}
+        self.tableheight = 3
+        self.tablewidth = 3
+        self.create_widgets()
+
+
+    def create_widgets(self):
+        counter = 0
+        middle = tk.StringVar()
+        for row in range(self.tableheight):
+            for column in range(self.tablewidth):
+                if counter == 4:
+                    self.entries[counter] = tk.Entry(self, width=10, textvariable=middle, state="disabled")
+                else:
+                    self.entries[counter] = tk.Entry(self, width=10)
+                self.entries[counter].grid(row=row, column=column)
+                counter += 1
+        middle.set("W")
+
+    def print_table(self):
+        print(self.entries[4].get())
+
 class Cube:
     """
-            WHITE
+               WHITE (U)
 
-    BLUE    RED     GREEN   ORANGE
+  ORANGE (L)   GREEN (F)    RED (R)    BLUE (B)
 
-            YELLOW
+              YELLOW (D)
     """
+    def __init__(self, state):
+        
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = GUI(master=root)
+    app.mainloop()
+    while True:
+        try:
+            app.update_idletasks()
+            app.update()
+            app.print_table()
+        except KeyboardInterrupt:
+            exit(0)

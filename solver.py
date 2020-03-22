@@ -4,10 +4,10 @@ from pathlib import Path
 from enum import Enum
 from marcs.CubeSolver.stepper import Stepper
 from argparse import ArgumentParser, ArgumentError
-from marcs.RubiksCubeSolver import cube
+from marcs.RubiksCubeSolver import cube as cubelib
 
 
-logger = log.setup(name=str(Path(__file__).stem))
+logger = log.setup(name=str(Path(__file__).stem), add_handler=True)
 logger.setLevel(logging.DEBUG)
 
 
@@ -87,28 +87,30 @@ class Cube:
         name = self.ids.get(name, name)
         return object.__getattribute__(self, name)
 
-    def rot90(self, id: str, direction: str = "CW", sleep_time = 1e-2):
+    def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2):
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
-        getattr(self, id).step(direction=direction, n = 200 / 4, sleep_time=sleep_time)
+        logger.debug(f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
+        getattr(self, id).step(direction=direction, n=200 / 4, sleep_time=sleep_time)
 
-    def move(self, move: str):
+    def move(self, move: str, sleep_time: float = 1e-2):
         """
         A move always starts with the id of the face to rotate. It can then  be follow by either 2 which means
         move twice, ' which means move counter clockwise or nothing. One move is 90 degrees.
         """
+        logger.debug(f"Doing move '{move}' with sleep time {sleep_time}")
         if len(move) > 2:
             raise ValueError(f"Move must be described by maximum 2 characters, got {move}")
         elif len(move) == 0:
             raise ValueError(f"Got an empty string")
         elif len(move) == 1:
-            self.rot90(move)
+            self.rot90(move, sleep_time=sleep_time)
         elif len(move) == 2:
             if move[1] == "2":
-                self.rot90(move[0])
-                self.rot90(move[0])
+                self.rot90(move[0], sleep_time=sleep_time)
+                self.rot90(move[0], sleep_time=sleep_time)
             elif move[1] == "'":
-                self.rot90(move[0], direction="CCW")
+                self.rot90(move[0], direction="CCW", sleep_time=sleep_time)
             else:
                 raise ValueError(f"Unrecognized modifier {move[1]}")
         else:
@@ -126,10 +128,13 @@ def jog(cube: Cube):
             while option != "ok":
                 option = input("option: ")
                 if option == "":
+                    logger.debug("Stepping")
                     face.step(direction=direction, n=1, sleep_time=0)
                 elif option in ["cw", "ccw"]:
+                    logger.debug(f"Switched to rotating {option}")
                     direction = option
                 elif option == "ok":
+                    logger.debug("Got ok")
                     pass
                 else:
                     logger.warn(f"Don't know what to do with {option}, ignoring")
@@ -156,4 +161,52 @@ def jog_if_needed(cube: Cube):
 
 
 def main():
+    parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
+    parser.add_argument("-t", "--delay-time", type=float, default=1e-2, help="Sleep time between each step of the motors in seconds (default 1e-2)")
+    parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info"], default="info", help="Set log level")
+    parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
+    parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
+    args = parser.parse_args()
 
+    logger.info("Starting MARCS main loop")
+    logger.setLevel(getattr(logging, args.log_level.upper()))
+    logger.info(f"Logging level set to {args.log_level}")
+    cube = Cube()
+    logger.info(f"All steppers instantiated, GPIO assigned and configured")
+
+    if not args.no_jog:
+        logger.info("Starting jogging sequence")
+        jog_if_needed(cube)
+        logger.info("Jogging sequence completed")
+    else:
+        logger.warn("Jogging sequence skipped")
+
+    logger.info("Generating scrambling sequence...")
+    cubelib.scramble()
+    scramble_seq = cubelib.get_scramble()
+    scramble_moves = scramble_seq.split(" ")
+    logger.debug(f"Scrambling sequence is: {scramble_seq}")
+
+    logger.info("Scrambling...")
+    for move in scramble_moves:
+        if args.interactive:
+            input()
+        cube.move(move, sleep_time=args.delay_time)
+
+    logger.info("Scrambling done")
+    logger.info("Generating solving sequence...")
+    cubelib.solve()
+    solve_seq = cubelib.get_moves()
+    solve_moves = solve_seq.split(" ")
+    logging.debug(f"Solving sequence is: {solve_seq}")
+
+    logger.info("Solving...")
+    for move in solve_moves:
+        if args.interactive:
+            input()
+        cube.move(move, sleep_time=args.delay_time)
+    logging.info("Solving done, exiting")
+
+
+if __name__ == "__main__":
+    main()

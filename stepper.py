@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import argparse
 import ast
 import logging
-import logger as log
+import marcs.CubeSolver.logger as log
 from pathlib import Path
 from time import sleep
 
