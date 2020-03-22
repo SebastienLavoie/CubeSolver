@@ -3,7 +3,6 @@ import argparse
 import ast
 import logging
 import logger as log
-import pickle
 from pathlib import Path
 from time import sleep
 
@@ -83,12 +82,46 @@ class Stepper:
             elif direction == "CW":
                 return (self.get_state() + 15) % 8
 
-    def step(self, half_step: bool = False, direction: str = "CW"):
-        next_state = self.get_next_state(half_step=half_step, direction=direction)
-        logger.debug(f"state: {next_state}")
-        winding_states = self.inverted_state_dict[next_state]
-        self.windingA.energize(winding_states[0])
-        self.windingB.energize(winding_states[1])
+    @staticmethod
+    def create_state_file_if_needed(filename: str):
+        if not Path("states").is_dir():
+            Path("states").mkdir(parents=False)
+        if not Path("states", filename).exists():
+            with open(filename, "w") as fp:
+                fp.write("-1")
+
+    def store_state(self, filename: str):
+        self.create_state_file_if_needed(filename)
+        with open(str(Path("states", filename)), "w") as fp:
+            fp.write(f"{self.get_state()}")
+
+    def load_state(self, filename: str):
+        if not Path("states", filename).exists():
+            raise FileNotFoundError(f"No state file created for {filename}")
+
+        with open(str(Path("states", filename)), "r") as fp:
+            state = fp.read()
+
+        try:
+            state = int(state)
+        except ValueError:
+            raise ValueError(f"read state '{state}' is not an integer")
+
+        if state not in list(range(8)):
+            logger.warn(f"Read invalid state '{state}' from '{filename}', not loading")
+        else:
+            winding_states = self.inverted_state_dict[state]
+            self.windingA.energize(winding_states[0])
+            self.windingB.energize(winding_states[1])
+
+    def step(self, half_step: bool = False, direction: str = "CW", n: int = 1, sleep_time: float = 1e-2):
+        for i in range(n):
+            next_state = self.get_next_state(half_step=half_step, direction=direction)
+            logger.debug(f"state: {next_state}")
+            winding_states = self.inverted_state_dict[next_state]
+            self.windingA.energize(winding_states[0])
+            self.windingB.energize(winding_states[1])
+            sleep(sleep_time)
 
 
 if __name__ == "__main__":
