@@ -2,13 +2,13 @@ import RPi.GPIO as GPIO
 import argparse
 import ast
 import logging
-import logger as log
+import marcs.CubeSolver.logger as log
 from pathlib import Path
 from time import sleep
 
 
 logger = log.setup(name=str(Path(__file__).stem))
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class Winding:
