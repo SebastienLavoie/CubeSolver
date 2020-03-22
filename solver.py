@@ -9,7 +9,7 @@ import RPi.GPIO as GPIO
 import atexit
 
 
-
+GPIO.setmode(GPIO.BCM)
 logger = log.setup(name=str(Path(__file__).stem), add_handler=True)
 logger.setLevel(logging.DEBUG)
 
@@ -21,13 +21,13 @@ class GPIOs(Enum):
         "B1N1": 13,
         "B1N2": 19
     }
-    BLUE = {
+    WHITE = {
         "A1N1": 3,
         "A1N2": 2,
         "B1N1": 4,
         "B1N2": 17
     }
-    WHITE = {
+    BLUE = {
         "A1N1": 22,
         "A1N2": 27,
         "B1N1": 10,
@@ -94,7 +94,7 @@ class Cube:
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
         logger.debug(f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
-        getattr(self, id).step(direction=direction, n=200 / 4, sleep_time=sleep_time)
+        getattr(self, id).step(direction=direction, n=50, sleep_time=sleep_time)
 
     def move(self, move: str, sleep_time: float = 1e-2):
         """
@@ -122,7 +122,7 @@ class Cube:
 
 def jog(cube: Cube):
     logger.info("Entering jog routine")
-    print("Choose direction by inputing 'cw' or 'ccw' (default cw), step once by pressing enter and end by inputing 'ok'")
+    print("Choose direction by inputing 'cw', 'ccw' or 'r' to reverse direction (default cw), step once by pressing enter and end by inputing 'ok'")
     direction = "cw"
     try:
         for id in Cube.ids:
@@ -140,6 +140,11 @@ def jog(cube: Cube):
                 elif option == "ok":
                     logger.debug("Got ok")
                     pass
+                elif option == "r":
+                    if direction == "cw":
+                        direction = "ccw"
+                    else:
+                        direction = "cw"
                 else:
                     logger.warn(f"Don't know what to do with {option}, ignoring")
             face.store_state(Cube.ids[id])
@@ -206,6 +211,7 @@ def main():
 
     logger.info("Scrambling...")
     for move in scramble_moves:
+        logger.debug(move)
         if args.interactive:
             input()
         cube.move(move, sleep_time=args.delay_time)
@@ -219,6 +225,7 @@ def main():
 
     logger.info("Solving...")
     for move in solve_moves:
+        logger.debug(move)
         if args.interactive:
             input()
         cube.move(move, sleep_time=args.delay_time)
