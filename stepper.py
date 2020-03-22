@@ -8,7 +8,7 @@ from time import sleep
 
 
 logger = log.setup(name=str(Path(__file__).stem))
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class Winding:

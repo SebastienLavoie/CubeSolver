@@ -5,6 +5,9 @@ from enum import Enum
 from marcs.CubeSolver.stepper import Stepper
 from argparse import ArgumentParser, ArgumentError
 from marcs.RubiksCubeSolver import cube as cubelib
+import RPi.GPIO as GPIO
+import atexit
+
 
 
 logger = log.setup(name=str(Path(__file__).stem), add_handler=True)
@@ -59,12 +62,12 @@ class Cube:
                  YELLOW (D)
     """
     def __init__(self):
-        self.red = Stepper(*list(GPIOs.RED[x] for x in GPIOs.RED.value))
-        self.green = Stepper(*list(GPIOs.GREEN[x] for x in GPIOs.GREEN.value))
-        self.blue = Stepper(*list(GPIOs.BLUE[x] for x in GPIOs.BLUE.value))
-        self.yellow = Stepper(*list(GPIOs.YELLOW[x] for x in GPIOs.YELLOW.value))
-        self.orange = Stepper(*list(GPIOs.ORANGE[x] for x in GPIOs.ORANGE.value))
-        self.white = Stepper(*list(GPIOs.WHITE[x] for x in GPIOs.WHITE.value))
+        self.red = Stepper(*list(GPIOs.RED.value[x] for x in GPIOs.RED.value))
+        self.green = Stepper(*list(GPIOs.GREEN.value[x] for x in GPIOs.GREEN.value))
+        self.blue = Stepper(*list(GPIOs.BLUE.value[x] for x in GPIOs.BLUE.value))
+        self.yellow = Stepper(*list(GPIOs.YELLOW.value[x] for x in GPIOs.YELLOW.value))
+        self.orange = Stepper(*list(GPIOs.ORANGE.value[x] for x in GPIOs.ORANGE.value))
+        self.white = Stepper(*list(GPIOs.WHITE.value[x] for x in GPIOs.WHITE.value))
 
     ids = {
         "U": "white",
@@ -125,11 +128,12 @@ def jog(cube: Cube):
         for id in Cube.ids:
             logger.info(f"Jogging {Cube.ids[id]}({id})")
             face = getattr(cube, id)
+            option = input("option: ")
             while option != "ok":
                 option = input("option: ")
                 if option == "":
                     logger.debug("Stepping")
-                    face.step(direction=direction, n=1, sleep_time=0)
+                    face.step(direction=direction.upper(), n=1, sleep_time=0)
                 elif option in ["cw", "ccw"]:
                     logger.debug(f"Switched to rotating {option}")
                     direction = option
@@ -144,9 +148,12 @@ def jog(cube: Cube):
         logger.warn("Exited before jogging was completed!")
 
 
-def jog_if_needed(cube: Cube):
+def jog_if_needed(cube: Cube, force=False):
     for id in Cube.ids:
-        if not Path("states", Cube.ids[id]).exists():
+        if force:
+            jog(cube)
+            break
+        elif not Path("states", Cube.ids[id]).exists():
             jog(cube)
             break
         else:
@@ -160,23 +167,33 @@ def jog_if_needed(cube: Cube):
     logger.info("Jogging not needed, all steppers calibrated")
 
 
+def cleanup(cube):
+    logger.info("Cleaning up and exiting")
+    for id in Cube.ids:
+        face = getattr(cube, id)
+        face.store_state(Cube.ids[id])
+    GPIO.cleanup()
+
+
 def main():
     parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
     parser.add_argument("-t", "--delay-time", type=float, default=1e-2, help="Sleep time between each step of the motors in seconds (default 1e-2)")
     parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info"], default="info", help="Set log level")
     parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
     parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
+    parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
     args = parser.parse_args()
 
     logger.info("Starting MARCS main loop")
     logger.setLevel(getattr(logging, args.log_level.upper()))
     logger.info(f"Logging level set to {args.log_level}")
     cube = Cube()
+    atexit.register(cleanup, cube)
     logger.info(f"All steppers instantiated, GPIO assigned and configured")
 
     if not args.no_jog:
         logger.info("Starting jogging sequence")
-        jog_if_needed(cube)
+        jog_if_needed(cube, force=args.jog)
         logger.info("Jogging sequence completed")
     else:
         logger.warn("Jogging sequence skipped")
