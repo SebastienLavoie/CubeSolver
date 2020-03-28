@@ -4,7 +4,7 @@ import logging.handlers
 
 class Logger:
     def __init__(self):
-        LOGFILE = f'log.log'
+        LOGFILE = f'solver.log'
         logger = logging.getLogger("")
         logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.DEBUG)

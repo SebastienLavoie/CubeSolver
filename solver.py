@@ -8,6 +8,7 @@ from marcs.RubiksCubeSolver import cube as cubelib
 import RPi.GPIO as GPIO
 import atexit
 
+GPIO.setmode(GPIO.BCM)
 
 class GPIOs(Enum):
     RED = {
@@ -232,6 +233,7 @@ def main():
     solve_moves = solve_seq.split(" ")
     log(l.DEBUG, f"Solving sequence is: {solve_seq}")
 
+    input("When ready to solve, press enter")
     log(l.INFO, "Solving...")
     for move in solve_moves:
         log(l.DEBUG, move)
