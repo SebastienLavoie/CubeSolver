@@ -90,11 +90,23 @@ class Cube:
         name = self.ids.get(name, name)
         return object.__getattribute__(self, name)
 
+    @staticmethod
+    def _opposite_direction(direction: str):
+        if direction is "CW":
+            return "CCW"
+        elif direction is "CCW":
+            return "CW"
+        else:
+            raise ValueError(f"{direction} is not a valid direction")
+
     def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2):
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
         logger.debug(f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
-        getattr(self, id).step(direction=direction, n=50, sleep_time=sleep_time)
+        stepper = getattr(self, id)
+        stepper.step(direction=direction, n=53, sleep_time=sleep_time)
+        # To compensate the shaft tolerance issues
+        stepper.step(direction=self._opposite_direction(direction), n=3, sleep_time=sleep_time)
 
     def move(self, move: str, sleep_time: float = 1e-2):
         """
