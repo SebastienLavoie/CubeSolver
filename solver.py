@@ -159,6 +159,7 @@ def jog(cube: Cube):
             log(l.INFO, f"Stored state of {Cube.ids[id]}")
     except KeyboardInterrupt:
         log(l.WARNING, "Exited before jogging was completed!")
+        raise KeyboardInterrupt
 
 
 def jog_if_needed(cube: Cube, force=False):
@@ -203,44 +204,47 @@ def main():
     cube = Cube()
     atexit.register(cleanup, cube)
     log(l.INFO, f"All steppers instantiated, GPIO assigned and configured")
+    try:
+        if not args.no_jog:
+            log(l.INFO, "Starting jogging sequence")
+            jog_if_needed(cube, force=args.jog)
+            log(l.INFO, "Jogging sequence completed")
+        else:
+            log(l.WARNING, "Jogging sequence skipped")
 
-    if not args.no_jog:
-        log(l.INFO, "Starting jogging sequence")
-        jog_if_needed(cube, force=args.jog)
-        log(l.INFO, "Jogging sequence completed")
-    else:
-        log(l.WARNING, "Jogging sequence skipped")
+        log(l.INFO, "Generating scrambling sequence...")
+        cubelib.scramble()
+        scramble_seq = cubelib.get_scramble()
+        scramble_moves = scramble_seq.split(" ")
+        log(l.DEBUG, f"Scrambling sequence is: {scramble_seq}")
 
-    log(l.INFO, "Generating scrambling sequence...")
-    cubelib.scramble()
-    scramble_seq = cubelib.get_scramble()
-    scramble_moves = scramble_seq.split(" ")
-    log(l.DEBUG, f"Scrambling sequence is: {scramble_seq}")
+        log(l.INFO, "Scrambling...")
+        for move in scramble_moves:
+            log(l.DEBUG, move)
+            if args.interactive:
+                input()
+            cube.move(move, sleep_time=args.delay_time)
 
-    log(l.INFO, "Scrambling...")
-    for move in scramble_moves:
-        log(l.DEBUG, move)
-        if args.interactive:
-            input()
-        cube.move(move, sleep_time=args.delay_time)
+        # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
 
-    # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
+        log(l.INFO, "Scrambling done")
+        log(l.INFO, "Generating solving sequence...")
+        cubelib.solve()
+        solve_seq = cubelib.get_moves()
+        solve_moves = solve_seq.split(" ")
+        log(l.DEBUG, f"Solving sequence is: {solve_seq}")
 
-    log(l.INFO, "Scrambling done")
-    log(l.INFO, "Generating solving sequence...")
-    cubelib.solve()
-    solve_seq = cubelib.get_moves()
-    solve_moves = solve_seq.split(" ")
-    log(l.DEBUG, f"Solving sequence is: {solve_seq}")
-
-    input("When ready to solve, press enter")
-    log(l.INFO, "Solving...")
-    for move in solve_moves:
-        log(l.DEBUG, move)
-        if args.interactive:
-            input()
-        cube.move(move, sleep_time=args.delay_time)
-    log(l.INFO, "Solving done, exiting")
+        input("When ready to solve, press enter")
+        log(l.INFO, "Solving...")
+        for move in solve_moves:
+            log(l.DEBUG, move)
+            if args.interactive:
+                input()
+            cube.move(move, sleep_time=args.delay_time)
+        log(l.INFO, "Solving done, exiting")
+    except KeyboardInterrupt:
+        log(l.DEBUG, "Keyboard interrupt, exiting")
+        exit(0)
 
 
 if __name__ == "__main__":
