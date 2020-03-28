@@ -186,7 +186,10 @@ def cleanup(cube):
     for id in Cube.ids:
         face = getattr(cube, id)
         face.store_state(Cube.ids[id])
+    for color in ["red", "green", "blue", "yellow", "orange", "white"]:
+        getattr(cube, color).state = 8
     GPIO.cleanup()
+
 
 
 def main():

@@ -56,7 +56,14 @@ class Stepper:
         }
         self.inverted_state_dict = {v: ast.literal_eval(k) for k, v in self.state_dict.items()}
 
-    def get_state(self):
+    @property
+    def state(self, state):
+        states = self.inverted_state_dict(state)
+        self.windingA.energize(states[0])
+        self.windingB.energize(states[1])
+
+    @state.getter
+    def state(self):
         return self.state_dict[str([self.windingA.energized, self.windingB.energized])]
 
     def get_next_state(self, half_step: bool = False, direction: str = "CW"):
