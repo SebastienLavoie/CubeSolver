@@ -4,6 +4,7 @@ from pathlib import Path
 from enum import Enum
 from marcs.CubeSolver.stepper import Stepper
 from argparse import ArgumentParser, ArgumentError
+from time import sleep
 from marcs.RubiksCubeSolver import cube as cubelib
 import RPi.GPIO as GPIO
 import atexit
@@ -195,6 +196,7 @@ def cleanup(cube):
 def main():
     parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
     parser.add_argument("-t", "--delay-time", type=float, default=1e-2, help="Sleep time between each step of the motors in seconds (default 1e-2)")
+    parser.add_argument("-mdt", "--move-delay-time", type=float, default=1e-2, help="Sleep time between each move (default 1e-2")
     parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info"], default="info", help="Set log level")
     parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
     parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
@@ -244,6 +246,7 @@ def main():
             if args.interactive:
                 input()
             cube.move(move, sleep_time=args.delay_time)
+            sleep(args.move_delay_time)
         log(l.INFO, "Solving done, exiting")
     except KeyboardInterrupt:
         log(l.DEBUG, "Keyboard interrupt, exiting")
