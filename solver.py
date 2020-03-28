@@ -1,5 +1,5 @@
-import logging
-import marcs.CubeSolver.logger as log
+import logging as l
+from marcs.CubeSolver.logger import log, set_log_level
 from pathlib import Path
 from enum import Enum
 from marcs.CubeSolver.stepper import Stepper
@@ -7,11 +7,6 @@ from argparse import ArgumentParser, ArgumentError
 from marcs.RubiksCubeSolver import cube as cubelib
 import RPi.GPIO as GPIO
 import atexit
-
-
-GPIO.setmode(GPIO.BCM)
-logger = log.setup(name=str(Path(__file__).stem), add_handler=True)
-logger.setLevel(logging.DEBUG)
 
 
 class GPIOs(Enum):
@@ -102,7 +97,7 @@ class Cube:
     def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2):
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
-        logger.debug(f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
+        log(l.DEBUG, f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
         stepper = getattr(self, id)
         stepper.step(direction=direction, n=53, sleep_time=sleep_time)
         # To compensate the shaft tolerance issues
@@ -113,7 +108,7 @@ class Cube:
         A move always starts with the id of the face to rotate. It can then  be follow by either 2 which means
         move twice, ' which means move counter clockwise or nothing. One move is 90 degrees.
         """
-        logger.debug(f"Doing move '{move}' with sleep time {sleep_time}")
+        log(l.DEBUG, f"Doing move '{move}' with sleep time {sleep_time}")
         if len(move) > 2:
             raise ValueError(f"Move must be described by maximum 2 characters, got {move}")
         elif len(move) == 0:
@@ -133,24 +128,24 @@ class Cube:
 
 
 def jog(cube: Cube):
-    logger.info("Entering jog routine")
+    log(l.INFO, "Entering jog routine")
     print("Choose direction by inputing 'cw', 'ccw' or 'r' to reverse direction (default cw), step once by pressing enter and end by inputing 'ok'")
     direction = "cw"
     try:
         for id in Cube.ids:
-            logger.info(f"Jogging {Cube.ids[id]}({id})")
+            log(l.INFO, f"Jogging {Cube.ids[id]}({id})")
             face = getattr(cube, id)
             option = input("option: ")
             while option != "ok":
                 option = input("option: ")
                 if option == "":
-                    logger.debug("Stepping")
+                    log(l.DEBUG, "Stepping")
                     face.step(direction=direction.upper(), n=1, sleep_time=0)
                 elif option in ["cw", "ccw"]:
-                    logger.debug(f"Switched to rotating {option}")
+                    log(l.DEBUG, f"Switched to rotating {option}")
                     direction = option
                 elif option == "ok":
-                    logger.debug("Got ok")
+                    log(l.DEBUG, "Got ok")
                     pass
                 elif option == "r":
                     if direction == "cw":
@@ -158,11 +153,11 @@ def jog(cube: Cube):
                     else:
                         direction = "cw"
                 else:
-                    logger.warn(f"Don't know what to do with {option}, ignoring")
+                    log(l.WARNING, f"Don't know what to do with {option}, ignoring")
             face.store_state(Cube.ids[id])
-            logger.info(f"Stored state of {Cube.ids[id]}")
+            log(l.INFO, f"Stored state of {Cube.ids[id]}")
     except KeyboardInterrupt:
-        logger.warn("Exited before jogging was completed!")
+        log(l.WARNING, "Exited before jogging was completed!")
 
 
 def jog_if_needed(cube: Cube, force=False):
@@ -181,11 +176,11 @@ def jog_if_needed(cube: Cube, force=False):
                 break
             else:
                 pass
-    logger.info("Jogging not needed, all steppers calibrated")
+    log(l.INFO, "Jogging not needed, all steppers calibrated")
 
 
 def cleanup(cube):
-    logger.info("Cleaning up and exiting")
+    log(l.INFO, "Cleaning up and exiting")
     for id in Cube.ids:
         face = getattr(cube, id)
         face.store_state(Cube.ids[id])
@@ -201,49 +196,49 @@ def main():
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
     args = parser.parse_args()
 
-    logger.info("Starting MARCS main loop")
-    logger.setLevel(getattr(logging, args.log_level.upper()))
-    logger.info(f"Logging level set to {args.log_level}")
+    log(l.INFO, "Starting MARCS main loop")
+    set_log_level(getattr(l, args.log_level.upper()))
+    log(l.INFO, f"Logging level set to {args.log_level}")
     cube = Cube()
     atexit.register(cleanup, cube)
-    logger.info(f"All steppers instantiated, GPIO assigned and configured")
+    log(l.INFO, f"All steppers instantiated, GPIO assigned and configured")
 
     if not args.no_jog:
-        logger.info("Starting jogging sequence")
+        log(l.INFO, "Starting jogging sequence")
         jog_if_needed(cube, force=args.jog)
-        logger.info("Jogging sequence completed")
+        log(l.INFO, "Jogging sequence completed")
     else:
-        logger.warn("Jogging sequence skipped")
+        log(l.WARNING, "Jogging sequence skipped")
 
-    logger.info("Generating scrambling sequence...")
+    log(l.INFO, "Generating scrambling sequence...")
     cubelib.scramble()
     scramble_seq = cubelib.get_scramble()
     scramble_moves = scramble_seq.split(" ")
-    logger.debug(f"Scrambling sequence is: {scramble_seq}")
+    log(l.DEBUG, f"Scrambling sequence is: {scramble_seq}")
 
-    logger.info("Scrambling...")
+    log(l.INFO, "Scrambling...")
     for move in scramble_moves:
-        logger.debug(move)
+        log(l.DEBUG, move)
         if args.interactive:
             input()
         cube.move(move, sleep_time=args.delay_time)
 
     # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
 
-    logger.info("Scrambling done")
-    logger.info("Generating solving sequence...")
+    log(l.INFO, "Scrambling done")
+    log(l.INFO, "Generating solving sequence...")
     cubelib.solve()
     solve_seq = cubelib.get_moves()
     solve_moves = solve_seq.split(" ")
-    logging.debug(f"Solving sequence is: {solve_seq}")
+    log(l.DEBUG, f"Solving sequence is: {solve_seq}")
 
-    logger.info("Solving...")
+    log(l.INFO, "Solving...")
     for move in solve_moves:
-        logger.debug(move)
+        log(l.DEBUG, move)
         if args.interactive:
             input()
         cube.move(move, sleep_time=args.delay_time)
-    logging.info("Solving done, exiting")
+    log(l.INFO, "Solving done, exiting")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,10 @@
 import RPi.GPIO as GPIO
 import argparse
 import ast
-import logging
-import marcs.CubeSolver.logger as log
+import logging as l
+from marcs.CubeSolver.logger import log, set_log_level
 from pathlib import Path
 from time import sleep
-
-
-logger = log.setup(name=str(Path(__file__).stem))
-logger.setLevel(logging.INFO)
 
 
 class Winding:
@@ -18,7 +14,7 @@ class Winding:
         self.energized = 0
         for pin in [pin1, pin2]:
             GPIO.setup(pin, GPIO.OUT)
-        logger.debug(f"winding instantiated with pins [{pin1}, {pin2}]")
+        log(l.DEBUG, f"winding instantiated with pins [{pin1}, {pin2}]")
 
     def energize(self, direction: int = 1):
         if direction == 1:
@@ -66,9 +62,6 @@ class Stepper:
     def get_next_state(self, half_step: bool = False, direction: str = "CW"):
         if not direction == "CW" and not direction == "CCW":
             raise ValueError(f"direction is either 'CW' or 'CCW', got '{direction}'")
-        curr_state = self.get_state()
-        if curr_state == 8:
-            curr_state = 0  # Initially state will be 8, need to get out of it
 
         if not half_step:
             full_step_states = [0, 2, 4, 6]
@@ -108,7 +101,7 @@ class Stepper:
             raise ValueError(f"read state '{state}' is not an integer")
 
         if state not in list(range(8)):
-            logger.warn(f"Read invalid state '{state}' from '{filename}', not loading")
+            log(l.WARNING, f"Read invalid state '{state}' from '{filename}', not loading")
         else:
             winding_states = self.inverted_state_dict[state]
             self.windingA.energize(winding_states[0])
@@ -117,7 +110,7 @@ class Stepper:
     def step(self, half_step: bool = False, direction: str = "CW", n: int = 1, sleep_time: float = 1e-2):
         for i in range(n):
             next_state = self.get_next_state(half_step=half_step, direction=direction)
-            logger.debug(f"state: {next_state}")
+            log(l.DEBUG, f"state: {next_state}")
             winding_states = self.inverted_state_dict[next_state]
             self.windingA.energize(winding_states[0])
             self.windingB.energize(winding_states[1])
@@ -133,8 +126,8 @@ if __name__ == "__main__":
     argParser.add_argument("-d", "--direction", type=str, default="CW", choices=["CW", "CCW"], help="spin CW or CCW")
     args = argParser.parse_args()
 
-    logger.setLevel(logging.DEBUG)
-    logger.info("setting up GPIO")
+    set_log_level(l.DEBUG)
+    log(l.INFO, "setting up GPIO")
     GPIO.setmode(GPIO.BCM)
     B1N1 = 24
     B1N2 = 23
@@ -144,17 +137,17 @@ if __name__ == "__main__":
 
     GPIO.setup(STBY, GPIO.OUT)
     GPIO.output(STBY, GPIO.HIGH)  # Standby needs to be high or motor is braked
-    logger.info("motor armed")
+    log(l.INFO, "motor armed")
     stepper = Stepper(A1N1, A1N2, B1N1, B1N2)
     wait_time = 1e-2
     if args.spin:
-        logger.info("starting, press CTRL+C to exit")
+        log(l.INFO, "starting, press CTRL+C to exit")
         while True:
             try:
                 stepper.step(half_step=False)
                 sleep(wait_time)
             except KeyboardInterrupt:
-                logger.info("Cleaning up GPIOS and exiting...")
+                log(l.INFO, "Cleaning up GPIOS and exiting...")
                 GPIO.cleanup()
                 exit(0)
     elif args.step:  # FIXME this does not work because state resets to 0 every time, maybe store last state in file?
