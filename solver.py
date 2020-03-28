@@ -216,6 +216,8 @@ def main():
             input()
         cube.move(move, sleep_time=args.delay_time)
 
+    # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
+
     logger.info("Scrambling done")
     logger.info("Generating solving sequence...")
     cubelib.solve()
