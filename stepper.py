@@ -58,14 +58,14 @@ class Stepper:
         self.inverted_state_dict = {v: ast.literal_eval(k) for k, v in self.state_dict.items()}
 
     @property
+    def state(self):
+        return self.state_dict[str([self.windingA.energized, self.windingB.energized])]
+
+    @state.setter
     def state(self, state):
         states = self.inverted_state_dict(state)
         self.windingA.energize(states[0])
         self.windingB.energize(states[1])
-
-    @state.getter
-    def state(self):
-        return self.state_dict[str([self.windingA.energized, self.windingB.energized])]
 
     def disarm(self):
         self.cached_state = self.state
