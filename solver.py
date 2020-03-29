@@ -109,7 +109,7 @@ class Cube:
         stepper.arm()
         if half_step:
             rot_n = 106
-            comp_n = 6
+            comp_n = 5
         else:
             rot_n = 53
             comp_n = 3
@@ -215,6 +215,7 @@ def main():
     parser.add_argument("-t", "--delay-time", type=float, default=1e-2, help="Sleep time between each step of the motors in seconds (default 1e-2)")
     parser.add_argument("-mdt", "--move-delay-time", type=float, default=1e-2, help="Sleep time between each move (default 1e-2")
     parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info", "warning"], default="info", help="Set log level")
+    parser.add_argument("-t", "--test", default=False, dest="test", action="store_true", help="Test sequence, jog then do 90 deg rotations")
     parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
     parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
@@ -228,6 +229,13 @@ def main():
     atexit.register(cleanup, cube)
     log(l.INFO, f"All steppers instantiated, GPIO assigned and configured")
     try:
+        if args.test:
+            log(l.DEBUG, "Entering test sequence")
+            jog(cube, half_step=args.half_step)
+            while True:
+                input()
+                cube.move("U", sleep_time=args.delay_time, half_step=args.half_step)
+
         if not args.no_jog:
             log(l.INFO, "Starting jogging sequence")
             jog_if_needed(cube, force=args.jog, half_step=args.half_step)
@@ -268,8 +276,8 @@ def main():
             cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
             sleep(args.move_delay_time)
         end_time = time()
-        solve_time = start_time - end_time
-        log(l.INFO, f"Solving done in {solve_time}, exiting")
+        solve_time = end_time - start_time
+        log(l.INFO, f"Solving done in {round(solve_time,3)}, exiting")
     except KeyboardInterrupt:
         log(l.DEBUG, "Keyboard interrupt, exiting")
         exit(0)
