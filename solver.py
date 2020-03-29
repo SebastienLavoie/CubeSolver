@@ -142,7 +142,7 @@ class Cube:
             raise Exception(f"Should not get here")
 
 
-def jog(cube: Cube):
+def jog(cube: Cube, half_step: bool = False):
     log(l.INFO, "Entering jog routine")
     print("Choose direction by inputing 'cw', 'ccw' or 'r' to reverse direction (default cw), step once by pressing enter and end by inputing 'ok'")
     direction = "cw"
@@ -155,13 +155,17 @@ def jog(cube: Cube):
                 option = input("option: ")
                 if option == "":
                     log(l.DEBUG, "Stepping")
-                    face.step(direction=direction.upper(), n=1, sleep_time=0)
+                    face.step(direction=direction.upper(), n=1, sleep_time=0, half_step=half_step)
                 elif option in ["cw", "ccw"]:
                     log(l.DEBUG, f"Switched to rotating {option}")
                     direction = option
                 elif option == "ok":
                     log(l.DEBUG, "Got ok, reversing 3 steps for tolerance compensation")
-                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=3, sleep_time=1e-3)
+                    if half_step:
+                        n = 5
+                    else:
+                        n = 3
+                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=n, sleep_time=1e-3, half_step=half_step)
                     pass
                 elif option == "r":
                     if direction == "cw":
@@ -179,19 +183,19 @@ def jog(cube: Cube):
         raise KeyboardInterrupt
 
 
-def jog_if_needed(cube: Cube, force=False):
+def jog_if_needed(cube: Cube, force=False, half_step: bool = False):
     for id in Cube.ids:
         if force:
-            jog(cube)
+            jog(cube, half_step=half_step)
             break
         elif not Path("states", Cube.ids[id]).exists():
-            jog(cube)
+            jog(cube, half_step=half_step)
             break
         else:
             with open(str(Path("states", Cube.ids[id]))) as fp:
                 state = fp.read()
             if state == "-1":
-                jog(cube)
+                jog(cube, half_step=half_step)
                 break
             else:
                 log(l.INFO, "Jogging not needed, all steppers calibrated")
@@ -226,7 +230,7 @@ def main():
     try:
         if not args.no_jog:
             log(l.INFO, "Starting jogging sequence")
-            jog_if_needed(cube, force=args.jog)
+            jog_if_needed(cube, force=args.jog, half_step=args.half_step)
             log(l.INFO, "Jogging sequence completed")
         else:
             log(l.WARNING, "Jogging sequence skipped")
