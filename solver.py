@@ -101,18 +101,24 @@ class Cube:
         else:
             raise ValueError(f"{direction} is not a valid direction")
 
-    def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2):
+    def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2, half_step: bool = False):
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
         log(l.DEBUG, f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
         stepper = getattr(self, id)
         stepper.arm()
-        stepper.step(direction=direction, n=53, sleep_time=sleep_time)
+        if half_step:
+            rot_n = 106
+            comp_n = 6
+        else:
+            rot_n = 53
+            comp_n = 3
+        stepper.step(direction=direction, n=rot_n, sleep_time=sleep_time, half_step=half_step)
         # To compensate the shaft tolerance issues
-        stepper.step(direction=self._opposite_direction(direction), n=3, sleep_time=sleep_time)
+        stepper.step(direction=self._opposite_direction(direction), n=comp_n, sleep_time=sleep_time, half_step=half_step)
         stepper.disarm()
 
-    def move(self, move: str, sleep_time: float = 1e-2):
+    def move(self, move: str, sleep_time: float = 1e-2, half_step: bool = False):
         """
         A move always starts with the id of the face to rotate. It can then  be follow by either 2 which means
         move twice, ' which means move counter clockwise or nothing. One move is 90 degrees.
@@ -123,13 +129,13 @@ class Cube:
         elif len(move) == 0:
             raise ValueError(f"Got an empty string")
         elif len(move) == 1:
-            self.rot90(move, sleep_time=sleep_time)
+            self.rot90(move, sleep_time=sleep_time, half_step=half_step)
         elif len(move) == 2:
             if move[1] == "2":
-                self.rot90(move[0], sleep_time=sleep_time)
-                self.rot90(move[0], sleep_time=sleep_time)
+                self.rot90(move[0], sleep_time=sleep_time, half_step=half_step)
+                self.rot90(move[0], sleep_time=sleep_time, half_step=half_step)
             elif move[1] == "'":
-                self.rot90(move[0], direction="CCW", sleep_time=sleep_time)
+                self.rot90(move[0], direction="CCW", sleep_time=sleep_time, half_step=half_step)
             else:
                 raise ValueError(f"Unrecognized modifier {move[1]}")
         else:
@@ -208,6 +214,7 @@ def main():
     parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
     parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
+    parser.add_argument("--half-step", action="store_true", default=False, help="Use half steps when moving")
     args = parser.parse_args()
 
     log(l.INFO, "Starting MARCS main loop")
@@ -235,7 +242,7 @@ def main():
             log(l.DEBUG, move)
             if args.interactive:
                 input()
-            cube.move(move, sleep_time=args.delay_time)
+            cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
             sleep(args.move_delay_time)
 
         # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
@@ -254,7 +261,7 @@ def main():
             log(l.DEBUG, move)
             if args.interactive:
                 input()
-            cube.move(move, sleep_time=args.delay_time)
+            cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
             sleep(args.move_delay_time)
         end_time = dt.now()
         solve_time = start_time - end_time
