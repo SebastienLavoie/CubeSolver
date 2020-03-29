@@ -63,7 +63,7 @@ class Stepper:
 
     @state.setter
     def state(self, state):
-        states = self.inverted_state_dict(state)
+        states = self.inverted_state_dict[state]
         self.windingA.energize(states[0])
         self.windingB.energize(states[1])
 

@@ -6,7 +6,7 @@ from marcs.CubeSolver.stepper import Stepper
 from argparse import ArgumentParser, ArgumentError
 from time import sleep
 from marcs.RubiksCubeSolver import cube as cubelib
-from datetime import datetime as dt, timedelta as td
+from time import time
 import RPi.GPIO as GPIO
 import atexit
 
@@ -255,7 +255,7 @@ def main():
         log(l.DEBUG, f"Solving sequence is: {solve_seq}")
 
         input("When ready to solve, press enter")
-        start_time = dt.now()
+        start_time = time()
         log(l.INFO, "Solving...")
         for move in solve_moves:
             log(l.DEBUG, move)
@@ -263,9 +263,9 @@ def main():
                 input()
             cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
             sleep(args.move_delay_time)
-        end_time = dt.now()
+        end_time = time()
         solve_time = start_time - end_time
-        log(l.INFO, f"Solving done in {solve_time.seconds},{solve_time.microseconds}, exiting")
+        log(l.INFO, f"Solving done in {solve_time}, exiting")
     except KeyboardInterrupt:
         log(l.DEBUG, "Keyboard interrupt, exiting")
         exit(0)
