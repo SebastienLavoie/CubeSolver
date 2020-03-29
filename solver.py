@@ -6,6 +6,7 @@ from marcs.CubeSolver.stepper import Stepper
 from argparse import ArgumentParser, ArgumentError
 from time import sleep
 from marcs.RubiksCubeSolver import cube as cubelib
+from datetime import datetime as dt, timedelta as td
 import RPi.GPIO as GPIO
 import atexit
 
@@ -165,6 +166,7 @@ def jog(cube: Cube):
                 else:
                     log(l.WARNING, f"Don't know what to do with {option}, ignoring")
             face.store_state(Cube.ids[id])
+            face.disarm()
             log(l.INFO, f"Stored state of {Cube.ids[id]}")
     except KeyboardInterrupt:
         log(l.WARNING, "Exited before jogging was completed!")
@@ -186,8 +188,7 @@ def jog_if_needed(cube: Cube, force=False):
                 jog(cube)
                 break
             else:
-                pass
-    log(l.INFO, "Jogging not needed, all steppers calibrated")
+                log(l.INFO, "Jogging not needed, all steppers calibrated")
 
 
 def cleanup(cube):
@@ -235,6 +236,7 @@ def main():
             if args.interactive:
                 input()
             cube.move(move, sleep_time=args.delay_time)
+            sleep(args.move_delay_time)
 
         # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
 
@@ -246,6 +248,7 @@ def main():
         log(l.DEBUG, f"Solving sequence is: {solve_seq}")
 
         input("When ready to solve, press enter")
+        start_time = dt.now()
         log(l.INFO, "Solving...")
         for move in solve_moves:
             log(l.DEBUG, move)
@@ -253,7 +256,9 @@ def main():
                 input()
             cube.move(move, sleep_time=args.delay_time)
             sleep(args.move_delay_time)
-        log(l.INFO, "Solving done, exiting")
+        end_time = dt.now()
+        solve_time = start_time - end_time
+        log(l.INFO, f"Solving done in {solve_time.seconds},{solve_time.microseconds}, exiting")
     except KeyboardInterrupt:
         log(l.DEBUG, "Keyboard interrupt, exiting")
         exit(0)

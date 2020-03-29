@@ -76,7 +76,7 @@ class Stepper:
         if not self.cached_state == -1:
             self.state = self.cached_state
         else:
-            log(l.WARNING, "Can't arm before disarm, ignoring")
+            log(l.DEBUG, "Can't arm before disarm, ignoring")
 
     def get_next_state(self, half_step: bool = False, direction: str = "CW"):
         if not direction == "CW" and not direction == "CCW":
@@ -99,7 +99,7 @@ class Stepper:
         if not Path("states").is_dir():
             Path("states").mkdir(parents=False)
         if not Path("states", filename).exists():
-            with open(filename, "w") as fp:
+            with open(Path("states", filename), "w") as fp:
                 fp.write("-1")
 
     def store_state(self, filename: str):
