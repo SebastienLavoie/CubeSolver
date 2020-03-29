@@ -1,16 +1,19 @@
-import logging as l
-from marcs.CubeSolver.logger import log, set_log_level
-from pathlib import Path
-from enum import Enum
-from marcs.CubeSolver.stepper import Stepper
-from argparse import ArgumentParser, ArgumentError
-from time import sleep
-from marcs.RubiksCubeSolver import cube as cubelib
-from time import time
-import RPi.GPIO as GPIO
 import atexit
+import logging as l
+import sys
+from argparse import ArgumentParser
+from enum import Enum
+from pathlib import Path
+from time import sleep
+from time import time
+
+import RPi.GPIO as GPIO
+from marcs.CubeSolver.logger import log, set_log_level
+from marcs.CubeSolver.stepper import Stepper
+from marcs.RubiksCubeSolver import cube as cubelib
 
 GPIO.setmode(GPIO.BCM)
+
 
 class GPIOs(Enum):
     RED = {
@@ -59,6 +62,7 @@ class Cube:
 
                  YELLOW (D)
     """
+
     def __init__(self):
         self.red = Stepper(*list(GPIOs.RED.value[x] for x in GPIOs.RED.value))
         self.green = Stepper(*list(GPIOs.GREEN.value[x] for x in GPIOs.GREEN.value))
@@ -115,7 +119,8 @@ class Cube:
             comp_n = 3
         stepper.step(direction=direction, n=rot_n, sleep_time=sleep_time, half_step=half_step)
         # To compensate the shaft tolerance issues
-        stepper.step(direction=self._opposite_direction(direction), n=comp_n, sleep_time=sleep_time, half_step=half_step)
+        stepper.step(direction=self._opposite_direction(direction), n=comp_n, sleep_time=sleep_time,
+                     half_step=half_step)
         stepper.disarm()
 
     def move(self, move: str, sleep_time: float = 1e-2, half_step: bool = False):
@@ -144,7 +149,8 @@ class Cube:
 
 def jog(cube: Cube, half_step: bool = False):
     log(l.INFO, "Entering jog routine")
-    print("Choose direction by inputing 'cw', 'ccw' or 'r' to reverse direction (default cw), step once by pressing enter and end by inputing 'ok'")
+    print(
+        "Choose direction by inputing 'cw', 'ccw' or 'r' to reverse direction (default cw), step once by pressing enter and end by inputing 'ok'")
     direction = "cw"
     try:
         for id in Cube.ids:
@@ -165,7 +171,8 @@ def jog(cube: Cube, half_step: bool = False):
                     else:
                         n = 3
                     log(l.DEBUG, f"Got ok, reversing {n} steps for tolerance compensation")
-                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=n, sleep_time=1e-2, half_step=half_step)
+                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=n, sleep_time=1e-2,
+                              half_step=half_step)
                     pass
                 elif option == "r":
                     if direction == "cw":
@@ -218,17 +225,25 @@ def cleanup(cube):
 
 def main():
     parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
-    parser.add_argument("-t", "--delay-time", type=float, default=1e-3, help="Sleep time between each step of the motors in seconds (default 1e-3)")
-    parser.add_argument("-mdt", "--move-delay-time", type=float, default=5e-2, help="Sleep time between each move (default 5e-2")
-    parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info", "warning"], default="info", help="Set log level")
-    parser.add_argument("--test", default=False, action="store_true", help="Test sequence, jog then do 90 deg rotations")
-    parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
-    parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
+    parser.add_argument("-t", "--delay-time", type=float, default=1e-3,
+                        help="Sleep time between each step of the motors in seconds (default 1e-3)")
+    parser.add_argument("-mdt", "--move-delay-time", type=float, default=5e-2,
+                        help="Sleep time between each move (default 5e-2")
+    parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info", "warning"], default="info",
+                        help="Set log level")
+    parser.add_argument("--test", default=False, action="store_true",
+                        help="Test sequence, jog then do 90 deg rotations")
+    parser.add_argument("-i", "--interactive", action="store_true", default=False,
+                        help="Go step by step while waiting for user input between each")
+    parser.add_argument("--no-jog", action="store_true", default=False,
+                        help="Skip initial jogging calibration of steppers, use with caution")
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
-    parser.add_argument("--full-step", dest="half_step", action="store_false", default=True, help="Use full steps when moving (not recommended)")
+    parser.add_argument("--full-step", dest="half_step", action="store_false", default=True,
+                        help="Use full steps when moving (not recommended)")
     args = parser.parse_args()
 
     log(l.INFO, "Starting MARCS main loop")
+    log(l.DEBUG, f"Passed arguments: {sys.argv}")
     set_log_level(getattr(l, args.log_level.upper()))
     log(l.INFO, f"Logging level set to {args.log_level}")
     cube = Cube()
@@ -280,7 +295,7 @@ def main():
             sleep(args.move_delay_time)
         end_time = time()
         solve_time = end_time - start_time
-        log(l.INFO, f"Solving done in {round(solve_time,3)}s with {len(solve_moves)} moves, exiting")
+        log(l.INFO, f"Solving done in {round(solve_time, 3)}s with {len(solve_moves)} moves, exiting")
     except KeyboardInterrupt:
         log(l.DEBUG, "Keyboard interrupt, exiting")
         exit(0)
