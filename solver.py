@@ -108,8 +108,8 @@ class Cube:
         stepper = getattr(self, id)
         stepper.arm()
         if half_step:
-            rot_n = 106
-            comp_n = 5
+            rot_n = 105
+            comp_n = 4
         else:
             rot_n = 53
             comp_n = 3
@@ -160,12 +160,12 @@ def jog(cube: Cube, half_step: bool = False):
                     log(l.DEBUG, f"Switched to rotating {option}")
                     direction = option
                 elif option == "ok":
-                    log(l.DEBUG, "Got ok, reversing 3 steps for tolerance compensation")
                     if half_step:
                         n = 5
                     else:
                         n = 3
-                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=n, sleep_time=1e-3, half_step=half_step)
+                    log(l.DEBUG, f"Got ok, reversing {n} steps for tolerance compensation")
+                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=n, sleep_time=1e-2, half_step=half_step)
                     pass
                 elif option == "r":
                     if direction == "cw":
@@ -184,21 +184,27 @@ def jog(cube: Cube, half_step: bool = False):
 
 
 def jog_if_needed(cube: Cube, force=False, half_step: bool = False):
+    jogged = False
     for id in Cube.ids:
         if force:
             jog(cube, half_step=half_step)
+            jogged = True
             break
         elif not Path("states", Cube.ids[id]).exists():
             jog(cube, half_step=half_step)
+            jogged = True
             break
         else:
             with open(str(Path("states", Cube.ids[id]))) as fp:
                 state = fp.read()
             if state == "-1":
                 jog(cube, half_step=half_step)
+                jogged = True
                 break
-            else:
-                log(l.INFO, "Jogging not needed, all steppers calibrated")
+    if not jogged:
+        log(l.INFO, "Jogging not needed, all steppers calibrated")
+    else:
+        log(l.INFO, "Jogging sequence completed")
 
 
 def cleanup(cube):
@@ -212,14 +218,14 @@ def cleanup(cube):
 
 def main():
     parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
-    parser.add_argument("-t", "--delay-time", type=float, default=1e-2, help="Sleep time between each step of the motors in seconds (default 1e-2)")
-    parser.add_argument("-mdt", "--move-delay-time", type=float, default=1e-2, help="Sleep time between each move (default 1e-2")
+    parser.add_argument("-t", "--delay-time", type=float, default=1e-3, help="Sleep time between each step of the motors in seconds (default 1e-3)")
+    parser.add_argument("-mdt", "--move-delay-time", type=float, default=5e-2, help="Sleep time between each move (default 5e-2")
     parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info", "warning"], default="info", help="Set log level")
-    parser.add_argument("-t", "--test", default=False, dest="test", action="store_true", help="Test sequence, jog then do 90 deg rotations")
+    parser.add_argument("--test", default=False, action="store_true", help="Test sequence, jog then do 90 deg rotations")
     parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
     parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
-    parser.add_argument("--half-step", action="store_true", default=False, help="Use half steps when moving")
+    parser.add_argument("--full-step", dest="half_step", action="store_false", default=True, help="Use full steps when moving (not recommended)")
     args = parser.parse_args()
 
     log(l.INFO, "Starting MARCS main loop")
@@ -239,7 +245,6 @@ def main():
         if not args.no_jog:
             log(l.INFO, "Starting jogging sequence")
             jog_if_needed(cube, force=args.jog, half_step=args.half_step)
-            log(l.INFO, "Jogging sequence completed")
         else:
             log(l.WARNING, "Jogging sequence skipped")
 
@@ -256,8 +261,6 @@ def main():
                 input()
             cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
             sleep(args.move_delay_time)
-
-        # TODO allow user to edit previous move by manually stepping, Maybe step 52 times to compensate for friction?
 
         log(l.INFO, "Scrambling done")
         log(l.INFO, "Generating solving sequence...")
@@ -277,7 +280,7 @@ def main():
             sleep(args.move_delay_time)
         end_time = time()
         solve_time = end_time - start_time
-        log(l.INFO, f"Solving done in {round(solve_time,3)}, exiting")
+        log(l.INFO, f"Solving done in {round(solve_time,3)}s with {len(solve_moves)} moves, exiting")
     except KeyboardInterrupt:
         log(l.DEBUG, "Keyboard interrupt, exiting")
         exit(0)
