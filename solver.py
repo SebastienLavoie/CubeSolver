@@ -93,6 +93,10 @@ class Cube:
             return "CCW"
         elif direction is "CCW":
             return "CW"
+        elif direction is "cw":
+            return "ccw"
+        elif direction is "ccw":
+            return "cw"
         else:
             raise ValueError(f"{direction} is not a valid direction")
 
@@ -101,9 +105,11 @@ class Cube:
             raise ValueError(f"Unrecognized id '{id}'")
         log(l.DEBUG, f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
         stepper = getattr(self, id)
+        stepper.arm()
         stepper.step(direction=direction, n=53, sleep_time=sleep_time)
         # To compensate the shaft tolerance issues
         stepper.step(direction=self._opposite_direction(direction), n=3, sleep_time=sleep_time)
+        stepper.disarm()
 
     def move(self, move: str, sleep_time: float = 1e-2):
         """
@@ -147,13 +153,15 @@ def jog(cube: Cube):
                     log(l.DEBUG, f"Switched to rotating {option}")
                     direction = option
                 elif option == "ok":
-                    log(l.DEBUG, "Got ok")
+                    log(l.DEBUG, "Got ok, reversing 3 steps for tolerance compensation")
+                    face.step(direction=(cube._opposite_direction(direction)).upper(), n=3, sleep_time=1e-3)
                     pass
                 elif option == "r":
                     if direction == "cw":
                         direction = "ccw"
                     else:
                         direction = "cw"
+                    log(l.DEBUG, f"Reversing direction, now rotating {direction}")
                 else:
                     log(l.WARNING, f"Don't know what to do with {option}, ignoring")
             face.store_state(Cube.ids[id])
@@ -187,17 +195,15 @@ def cleanup(cube):
     for id in Cube.ids:
         face = getattr(cube, id)
         face.store_state(Cube.ids[id])
-    for color in ["red", "green", "blue", "yellow", "orange", "white"]:
-        getattr(cube, color).state = 8
+        face.state = 8  # De energize windings to preserve steppers
     GPIO.cleanup()
-
 
 
 def main():
     parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
     parser.add_argument("-t", "--delay-time", type=float, default=1e-2, help="Sleep time between each step of the motors in seconds (default 1e-2)")
     parser.add_argument("-mdt", "--move-delay-time", type=float, default=1e-2, help="Sleep time between each move (default 1e-2")
-    parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info"], default="info", help="Set log level")
+    parser.add_argument("-ll", "--log-level", type=str, choices=["debug", "info", "warning"], default="info", help="Set log level")
     parser.add_argument("-i", "--interactive", action="store_true", default=False, help="Go step by step while waiting for user input between each")
     parser.add_argument("--no-jog", action="store_true", default=False, help="Skip initial jogging calibration of steppers, use with caution")
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")

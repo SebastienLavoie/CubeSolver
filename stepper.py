@@ -43,6 +43,7 @@ class Stepper:
     def __init__(self, pinA1: int, pinA2: int, pinB1: int, pinB2: int):
         self.windingA = Winding(pinA1, pinA2)
         self.windingB = Winding(pinB1, pinB2)
+        self.cached_state = -1
         self.state_dict = {
             "[1, 0]":   0,
             "[1, 1]":   1,
@@ -66,6 +67,17 @@ class Stepper:
     def state(self):
         return self.state_dict[str([self.windingA.energized, self.windingB.energized])]
 
+    def disarm(self):
+        self.cached_state = self.state
+        self.windingA.de_energize()
+        self.windingB.de_energize()
+
+    def arm(self):
+        if not self.cached_state == -1:
+            self.state = self.cached_state
+        else:
+            log(l.WARNING, "Can't arm before disarm, ignoring")
+
     def get_next_state(self, half_step: bool = False, direction: str = "CW"):
         if not direction == "CW" and not direction == "CCW":
             raise ValueError(f"direction is either 'CW' or 'CCW', got '{direction}'")
@@ -73,14 +85,14 @@ class Stepper:
         if not half_step:
             full_step_states = [0, 2, 4, 6]
             if direction == "CCW":
-                return full_step_states[(int(self.get_state() / 2) + 1) % 4]  # Uhhh yeah sorry about this code
+                return full_step_states[(int(self.state / 2) + 1) % 4]  # Uhhh yeah sorry about this code
             elif direction == "CW":
-                return full_step_states[(int(self.get_state() / 2) - 1) % 4]  # Only way I could think of to accommodate wraparound
+                return full_step_states[(int(self.state / 2) - 1) % 4]  # Only way I could think of to accommodate wraparound
         elif half_step:
             if direction == "CCW":
-                return (self.get_state() + 1) % 8  # move one state since half step
+                return (self.state + 1) % 8  # move one state since half step
             elif direction == "CW":
-                return (self.get_state() + 15) % 8
+                return (self.state + 15) % 8
 
     @staticmethod
     def create_state_file_if_needed(filename: str):
@@ -93,7 +105,7 @@ class Stepper:
     def store_state(self, filename: str):
         self.create_state_file_if_needed(filename)
         with open(str(Path("states", filename)), "w") as fp:
-            fp.write(f"{self.get_state()}")
+            fp.write(f"{self.state}")
 
     def load_state(self, filename: str):
         if not Path("states", filename).exists():
