@@ -105,10 +105,10 @@ class Cube:
         else:
             raise ValueError(f"{direction} is not a valid direction")
 
-    def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2, half_step: bool = False):
+    def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2, half_step: bool = True):
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
-        log(l.DEBUG, f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time}")
+        log(l.DEBUG, f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time} half step is {half_step}")
         stepper = getattr(self, id)
         stepper.arm()
         if half_step:
@@ -123,12 +123,12 @@ class Cube:
                      half_step=half_step)
         stepper.disarm()
 
-    def move(self, move: str, sleep_time: float = 1e-2, half_step: bool = False):
+    def move(self, move: str, sleep_time: float = 1e-2, half_step: bool = True):
         """
         A move always starts with the id of the face to rotate. It can then  be follow by either 2 which means
         move twice, ' which means move counter clockwise or nothing. One move is 90 degrees.
         """
-        log(l.DEBUG, f"Doing move '{move}' with sleep time {sleep_time}")
+        log(l.DEBUG, f"Doing move '{move}' with sleep time {sleep_time} half step is {half_step}")
         if len(move) > 2:
             raise ValueError(f"Move must be described by maximum 2 characters, got {move}")
         elif len(move) == 0:

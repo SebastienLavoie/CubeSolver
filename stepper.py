@@ -78,7 +78,7 @@ class Stepper:
         else:
             log(l.DEBUG, "Can't arm before disarm, ignoring")
 
-    def get_next_state(self, half_step: bool = False, direction: str = "CW"):
+    def get_next_state(self, half_step: bool = True, direction: str = "CW"):
         if not direction == "CW" and not direction == "CCW":
             raise ValueError(f"direction is either 'CW' or 'CCW', got '{direction}'")
 
@@ -126,13 +126,11 @@ class Stepper:
             self.windingA.energize(winding_states[0])
             self.windingB.energize(winding_states[1])
 
-    def step(self, half_step: bool = False, direction: str = "CW", n: int = 1, sleep_time: float = 1e-2):
+    def step(self, half_step: bool = True, direction: str = "CW", n: int = 1, sleep_time: float = 1e-2):
         for i in range(n):
             next_state = self.get_next_state(half_step=half_step, direction=direction)
             log(l.DEBUG, f"state: {next_state}")
-            winding_states = self.inverted_state_dict[next_state]
-            self.windingA.energize(winding_states[0])
-            self.windingB.energize(winding_states[1])
+            self.state = next_state
             sleep(sleep_time)
 
 
