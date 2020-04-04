@@ -218,6 +218,7 @@ def cleanup(cube):
     log(l.INFO, "Cleaning up and exiting")
     for id in Cube.ids:
         face = getattr(cube, id)
+        face.arm()
         face.store_state(Cube.ids[id])
         face.state = 8  # De energize windings to preserve steppers
     GPIO.cleanup()
