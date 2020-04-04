@@ -240,12 +240,17 @@ def main():
     parser.add_argument("-j", "--jog", action="store_true", default=False, help="Redo jogging sequence")
     parser.add_argument("--full-step", dest="half_step", action="store_false", default=True,
                         help="Use full steps when moving (not recommended)")
+    parser.add_argument("--max-speed", action="store_true", default=False, help="Use fastest settings")
     args = parser.parse_args()
 
     log(l.INFO, "Starting MARCS main loop")
     log(l.DEBUG, f"Passed arguments: {sys.argv}")
     set_log_level(getattr(l, args.log_level.upper()))
     log(l.INFO, f"Logging level set to {args.log_level}")
+    if args.max_speed:
+        args.delay_time = 5e-4
+        args.move_delay_time = 1e-2
+        log(l.DEBUG, "Using max speed, get that CTRL+C ready")
     cube = Cube()
     atexit.register(cleanup, cube)
     log(l.INFO, f"All steppers instantiated, GPIO assigned and configured")
