@@ -4,8 +4,7 @@ import sys
 from argparse import ArgumentParser
 from enum import Enum
 from pathlib import Path
-from time import sleep
-from time import time
+from time import sleep, time
 
 import RPi.GPIO as GPIO
 from marcs.CubeSolver.logger import log, set_log_level
@@ -226,7 +225,7 @@ def cleanup(cube):
 
 def main():
     parser = ArgumentParser(description="Top level for MARCS Rubik's cube solver")
-    parser.add_argument("-t", "--delay-time", type=float, default=1e-3,
+    parser.add_argument("-t", "--delay-time", type=float, default=5e-3,
                         help="Sleep time between each step of the motors in seconds (default 1e-3)")
     parser.add_argument("-mdt", "--move-delay-time", type=float, default=5e-2,
                         help="Sleep time between each move (default 5e-2")
@@ -248,9 +247,11 @@ def main():
     log(l.DEBUG, f"Passed arguments: {sys.argv}")
     set_log_level(getattr(l, args.log_level.upper()))
     log(l.INFO, f"Logging level set to {args.log_level}")
+    if args.log_level == "debug":
+        log(l.WARNING, "WARNING: debug log level WILL slow down the solving")
     if args.max_speed:
-        args.delay_time = 5e-4
-        args.move_delay_time = 1e-2
+        args.delay_time = 1e-3
+        args.move_delay_time = 5e-2
         log(l.DEBUG, "Using max speed, get that CTRL+C ready")
     cube = Cube()
     atexit.register(cleanup, cube)
