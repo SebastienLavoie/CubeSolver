@@ -63,7 +63,8 @@ class Stepper:
 
     @state.setter
     def state(self, state):
-        states = self.inverted_state_dict[state]
+        states = self.inverted_state_dict.get(state)
+        log(l.DEBUG, f"Setting windings to {states}")
         self.windingA.energize(states[0])
         self.windingB.energize(states[1])
 
@@ -126,7 +127,7 @@ class Stepper:
             self.windingA.energize(winding_states[0])
             self.windingB.energize(winding_states[1])
 
-    def step(self, half_step: bool = True, direction: str = "CW", n: int = 1, sleep_time: float = 1e-2):
+    def step(self, half_step: bool, sleep_time: float, direction: str = "CW", n: int = 1):
         for i in range(n):
             next_state = self.get_next_state(half_step=half_step, direction=direction)
             log(l.DEBUG, f"state: {next_state}")

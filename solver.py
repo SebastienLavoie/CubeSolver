@@ -105,7 +105,7 @@ class Cube:
         else:
             raise ValueError(f"{direction} is not a valid direction")
 
-    def rot90(self, id: str, direction: str = "CW", sleep_time=1e-2, half_step: bool = True):
+    def rot90(self, id: str, sleep_time: float, half_step: bool, direction: str = "CW"):
         if not id in Cube.ids:
             raise ValueError(f"Unrecognized id '{id}'")
         log(l.DEBUG, f"Rotating {id} 90deg in direction {direction} with sleep time {sleep_time} half step is {half_step}")
@@ -123,7 +123,7 @@ class Cube:
                      half_step=half_step)
         stepper.disarm()
 
-    def move(self, move: str, sleep_time: float = 1e-2, half_step: bool = True):
+    def move(self, move: str, sleep_time: float, half_step: bool):
         """
         A move always starts with the id of the face to rotate. It can then  be follow by either 2 which means
         move twice, ' which means move counter clockwise or nothing. One move is 90 degrees.
@@ -147,7 +147,7 @@ class Cube:
             raise Exception(f"Should not get here")
 
 
-def jog(cube: Cube, half_step: bool = False):
+def jog(cube: Cube, half_step: bool):
     log(l.INFO, "Entering jog routine")
     print(
         "Choose direction by inputing 'cw', 'ccw' or 'r' to reverse direction (default cw), step once by pressing enter and end by inputing 'ok'")
