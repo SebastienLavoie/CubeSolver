@@ -73,12 +73,12 @@ class Cube:
         self.white = Stepper(*list(GPIOs.WHITE.value[x] for x in GPIOs.WHITE.value))
 
     ids = {
-        "D": "white",
-        "U": "yellow",
-        "B": "orange",
-        "R": "green",
-        "F": "red",
-        "L": "blue"
+        "U": "white",
+        "D": "yellow",
+        "L": "orange",
+        "F": "green",
+        "R": "red",
+        "B": "blue"
     }
 
     # Allows accessing faces by either their color or their id.
@@ -156,11 +156,11 @@ class Cube:
             self.rot90(move, sleep_time=sleep_time, half_step=half_step)
         elif len(move) == 2:
             if move[1] == "2":
-                self.rot180(move[0], direction="CCW", sleep_time=sleep_time, half_step=half_step)
+                self.rot180(move[0], sleep_time=sleep_time, half_step=half_step)
             elif move[1] == "1":
-                self.rot90(move[0], direction="CCW", sleep_time=sleep_time, half_step=half_step)
-            elif move[1] == "'" or move[1] == "3":
                 self.rot90(move[0], sleep_time=sleep_time, half_step=half_step)
+            elif move[1] == "'" or move[1] == "3":
+                self.rot90(move[0], direction="CCW", sleep_time=sleep_time, half_step=half_step)
             else:
                 raise ValueError(f"Unrecognized modifier {move[1]}")
         else:
@@ -273,7 +273,7 @@ def main():
         log(l.WARNING, "WARNING: debug log level WILL slow down the solving")
     if args.max_speed:
         args.delay_time = 1e-3
-        args.move_delay_time = 5e-2
+        args.move_delay_time = 7e-2
         log(l.DEBUG, "Using max speed, get that CTRL+C ready")
     cube = Cube()
     atexit.register(cleanup, cube)
@@ -329,6 +329,14 @@ def main():
         moves = solve(cubestr)
         solve_moves = moves.split(" ")[0:-1]
         log(l.INFO, f"Solving sequence is: {moves}")
+        cube.ids = {  # Gigantic hack to transpose different reference system used by solver
+        "D": "white",
+        "U": "yellow",
+        "B": "orange",
+        "R": "green",
+        "F": "red",
+        "L": "blue"
+    }
 
         input("When ready to solve, press enter")
         start_time = time()
