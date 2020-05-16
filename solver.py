@@ -1,6 +1,7 @@
 import atexit
 import logging as l
 import sys
+import numpy as np
 from argparse import ArgumentParser
 from enum import Enum
 from pathlib import Path
@@ -10,6 +11,7 @@ import RPi.GPIO as GPIO
 from marcs.CubeSolver.logger import log, set_log_level
 from marcs.CubeSolver.stepper import Stepper
 from marcs.RubiksCubeSolver import cube as cubelib
+from marcs.TwoPhaseSolver.solver import solve
 
 GPIO.setmode(GPIO.BCM)
 
@@ -71,12 +73,12 @@ class Cube:
         self.white = Stepper(*list(GPIOs.WHITE.value[x] for x in GPIOs.WHITE.value))
 
     ids = {
-        "U": "white",
-        "D": "yellow",
-        "L": "orange",
-        "F": "green",
-        "R": "red",
-        "B": "blue"
+        "D": "white",
+        "U": "yellow",
+        "B": "orange",
+        "R": "green",
+        "F": "red",
+        "L": "blue"
     }
 
     # Allows accessing faces by either their color or their id.
@@ -154,10 +156,11 @@ class Cube:
             self.rot90(move, sleep_time=sleep_time, half_step=half_step)
         elif len(move) == 2:
             if move[1] == "2":
-                self.rot90(move[0], sleep_time=sleep_time, half_step=half_step)
-                self.rot90(move[0], sleep_time=sleep_time, half_step=half_step)
-            elif move[1] == "'":
+                self.rot180(move[0], direction="CCW", sleep_time=sleep_time, half_step=half_step)
+            elif move[1] == "1":
                 self.rot90(move[0], direction="CCW", sleep_time=sleep_time, half_step=half_step)
+            elif move[1] == "'" or move[1] == "3":
+                self.rot90(move[0], sleep_time=sleep_time, half_step=half_step)
             else:
                 raise ValueError(f"Unrecognized modifier {move[1]}")
         else:
@@ -259,6 +262,7 @@ def main():
     parser.add_argument("--full-step", dest="half_step", action="store_false", default=True,
                         help="Use full steps when moving (not recommended)")
     parser.add_argument("--max-speed", action="store_true", default=False, help="Use fastest settings")
+    parser.add_argument("-c", "--cubestr", type=str, default="", help="Cube string to use for solving")
     args = parser.parse_args()
 
     log(l.INFO, "Starting MARCS main loop")
@@ -288,26 +292,43 @@ def main():
         else:
             log(l.WARNING, "Jogging sequence skipped")
 
-        log(l.INFO, "Generating scrambling sequence...")
-        cubelib.scramble()
-        scramble_seq = cubelib.get_scramble()
-        scramble_moves = scramble_seq.split(" ")
-        log(l.DEBUG, f"Scrambling sequence is: {scramble_seq}")
+        if not args.cubestr:
+            log(l.INFO, "Generating scrambling sequence...")
+            cubelib.scramble()
+            scramble_seq = cubelib.get_scramble()
+            scramble_moves = scramble_seq.split(" ")
+            log(l.DEBUG, f"Scrambling sequence is: {scramble_seq}")
 
-        log(l.INFO, "Scrambling...")
-        for move in scramble_moves:
-            log(l.DEBUG, move)
-            if args.interactive:
-                input()
-            cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
-            sleep(args.move_delay_time)
+            log(l.INFO, "Scrambling...")
+            for move in scramble_moves:
+                log(l.DEBUG, move)
+                if args.interactive:
+                    input()
+                cube.move(move, sleep_time=args.delay_time, half_step=args.half_step)
+                sleep(args.move_delay_time)
 
-        log(l.INFO, "Scrambling done")
-        log(l.INFO, "Generating solving sequence...")
-        cubelib.solve()
-        solve_seq = cubelib.get_moves()
-        solve_moves = solve_seq.split(" ")
-        log(l.DEBUG, f"Solving sequence is: {solve_seq}")
+            log(l.INFO, "Scrambling done")
+            log(l.INFO, "Generating solving sequence...")
+            conversion_dict = {
+                "W": "D", "G": "R", "R": "F", "O": "B", "Y": "U", "B": "L"
+            }
+            cubestr = ""
+            c = cubelib.a
+            c[0] = np.rot90(c[0])
+            c[1] = np.rot90(c[1], 2)
+            c[4] = np.rot90(c[4], 3)
+            c[2] = np.rot90(c[2])
+            c[3] = np.rot90(c[3], 3)
+            for face in [4, 1, 2, 0, 5, 3]:
+                for row in range(3):
+                    for col in range(3):
+                        cubestr += conversion_dict[c[face][row][col]]
+        else:
+            cubestr = args.cubestr
+        print(cubestr)
+        moves = solve(cubestr)
+        solve_moves = moves.split(" ")[0:-1]
+        log(l.INFO, f"Solving sequence is: {moves}")
 
         input("When ready to solve, press enter")
         start_time = time()
