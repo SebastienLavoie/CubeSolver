@@ -180,7 +180,6 @@ def jog(cube: Cube, half_step: bool):
             while option != "ok":
                 option = input("option: ")
                 if option == "":
-                    log(l.DEBUG, "Stepping")
                     face.step(direction=direction.upper(), n=1, sleep_time=0, half_step=half_step)
                 elif option in ["cw", "ccw"]:
                     log(l.DEBUG, f"Switched to rotating {option}")
@@ -273,7 +272,7 @@ def main():
         log(l.WARNING, "WARNING: debug log level WILL slow down the solving")
     if args.max_speed:
         args.delay_time = 1e-3
-        args.move_delay_time = 7e-2
+        args.move_delay_time = 6e-2
         log(l.DEBUG, "Using max speed, get that CTRL+C ready")
     cube = Cube()
     atexit.register(cleanup, cube)
@@ -308,7 +307,6 @@ def main():
                 sleep(args.move_delay_time)
 
             log(l.INFO, "Scrambling done")
-            log(l.INFO, "Generating solving sequence...")
             conversion_dict = {
                 "W": "D", "G": "R", "R": "F", "O": "B", "Y": "U", "B": "L"
             }
@@ -323,7 +321,8 @@ def main():
                         cubestr += conversion_dict[c[face][row][col]]
         else:
             cubestr = args.cubestr
-        print(cubestr)
+
+        log(l.INFO, "Generating solving sequence...")
         moves = solve(cubestr)
         solve_moves = moves.split(" ")[0:-1]
         log(l.INFO, f"Solving sequence is: {moves}")
