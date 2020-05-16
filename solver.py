@@ -111,11 +111,29 @@ class Cube:
         stepper = getattr(self, id)
         stepper.arm()
         if half_step:
-            rot_n = 105
-            comp_n = 4
+            rot_n = 101
+            comp_n = 1
         else:
             rot_n = 53
             comp_n = 3
+        stepper.step(direction=direction, n=rot_n, sleep_time=sleep_time, half_step=half_step)
+        # To compensate the shaft tolerance issues
+        stepper.step(direction=self._opposite_direction(direction), n=comp_n, sleep_time=sleep_time,
+                     half_step=half_step)
+        stepper.disarm()
+
+    def rot180(self, id: str, sleep_time: float, half_step: bool, direction: str = "CW"):
+        if not id in Cube.ids:
+            raise ValueError(f"Unrecognized id '{id}'")
+        log(l.DEBUG, f"Rotating {id} 180deg in direction {direction} with sleep time {sleep_time} half step is {half_step}")
+        stepper = getattr(self, id)
+        stepper.arm()
+        if half_step:
+            rot_n = 202
+            comp_n = 2
+        else:
+            rot_n = 103
+            comp_n = 2
         stepper.step(direction=direction, n=rot_n, sleep_time=sleep_time, half_step=half_step)
         # To compensate the shaft tolerance issues
         stepper.step(direction=self._opposite_direction(direction), n=comp_n, sleep_time=sleep_time,
@@ -166,7 +184,7 @@ def jog(cube: Cube, half_step: bool):
                     direction = option
                 elif option == "ok":
                     if half_step:
-                        n = 5
+                        n = 1
                     else:
                         n = 3
                     log(l.DEBUG, f"Got ok, reversing {n} steps for tolerance compensation")
