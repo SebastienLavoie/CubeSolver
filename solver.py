@@ -17,37 +17,37 @@ GPIO.setmode(GPIO.BCM)
 
 
 class GPIOs(Enum):
-    RED = {
+    GREEN = {
         "A1N1": 6,
         "A1N2": 5,
         "B1N1": 13,
         "B1N2": 19
     }
-    WHITE = {
+    YELLOW = {
         "A1N1": 3,
         "A1N2": 2,
         "B1N1": 4,
         "B1N2": 17
     }
-    BLUE = {
+    ORANGE = {
         "A1N1": 22,
         "A1N2": 27,
         "B1N1": 10,
         "B1N2": 9
     }
-    YELLOW = {
+    WHITE = {
         "A1N1": 20,
         "A1N2": 21,
         "B1N1": 16,
         "B1N2": 12
     }
-    GREEN = {
+    RED = {
         "A1N1": 8,
         "A1N2": 7,
         "B1N1": 25,
         "B1N2": 24
     }
-    ORANGE = {
+    BLUE = {
         "A1N1": 18,
         "A1N2": 23,
         "B1N1": 15,
@@ -73,12 +73,12 @@ class Cube:
         self.white = Stepper(*list(GPIOs.WHITE.value[x] for x in GPIOs.WHITE.value))
 
     ids = {
-        "U": "white",
-        "D": "yellow",
-        "L": "orange",
-        "F": "green",
-        "R": "red",
-        "B": "blue"
+        "D": "white",
+        "U": "yellow",
+        "B": "orange",
+        "R": "green",
+        "F": "red",
+        "L": "blue"
     }
 
     # Allows accessing faces by either their color or their id.
@@ -314,12 +314,10 @@ def main():
             }
             cubestr = ""
             c = cubelib.a
-            c[0] = np.rot90(c[0])
-            c[1] = np.rot90(c[1], 2)
-            c[4] = np.rot90(c[4], 3)
-            c[2] = np.rot90(c[2])
-            c[3] = np.rot90(c[3], 3)
-            for face in [4, 1, 2, 0, 5, 3]:
+            c[2] = np.rot90(c[2], 3)
+            c[3] = np.rot90(c[3])
+            c[5] = np.rot90(c[5], 2)
+            for face in [0, 2, 1, 4, 3, 5]:
                 for row in range(3):
                     for col in range(3):
                         cubestr += conversion_dict[c[face][row][col]]
@@ -329,14 +327,6 @@ def main():
         moves = solve(cubestr)
         solve_moves = moves.split(" ")[0:-1]
         log(l.INFO, f"Solving sequence is: {moves}")
-        cube.ids = {  # Gigantic hack to transpose different reference system used by solver
-        "D": "white",
-        "U": "yellow",
-        "B": "orange",
-        "R": "green",
-        "F": "red",
-        "L": "blue"
-    }
 
         input("When ready to solve, press enter")
         start_time = time()
